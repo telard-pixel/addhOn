@@ -12,11 +12,7 @@ PLATFORMS = ["climate", "sensor"]
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Configura l'integrazione Haier hOn partendo da un Config Entry."""
-    # Importiamo il client API corretto (adattalo se la classe ha un nome diverso nel tuo file api.py o hon_client.py)
-    try:
-        from .api import HonApiClient
-    except ImportError:
-        from .hon_client import HonApiClient
+    from .api import HonApiClient
 
     # Inizializziamo il client API con le credenziali del config entry
     api_client = HonApiClient(entry.data.get("username"), entry.data.get("password"))
@@ -41,10 +37,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         _LOGGER,
         name="Haier hOn data",
         update_method=async_update_data,
-        update_interval=timedelta(seconds=30), # Una chiamata ogni 30 secondi per TUTTI i sensori
+        update_interval=timedelta(seconds=30),
     )
 
-    # Inseriamo l'api_client dentro l'oggetto coordinator così le entità possono usarlo per i comandi
+    # Memorizziamo il client direttamente nel coordinatore per l'invio dei comandi
     coordinator.api_client = api_client
 
     # Primo scaricamento dati all'avvio

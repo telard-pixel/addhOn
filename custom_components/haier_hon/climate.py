@@ -63,10 +63,7 @@ class HaierClimateEntity(CoordinatorEntity, ClimateEntity):
 
     async def async_set_hvac_mode(self, hvac_mode: HVACMode) -> None:
         """Invia il cambio modalità ed esegue un refresh forzato immediato."""
-        # Recuperiamo il client API dal file originale (immagazzinato dentro l'oggetto coordinatore o simile)
-        # Nota: assumiamo che tu possa accedere al client o ricrearlo, o che sia accessibile tramite coordinator
-        # Per sicurezza usiamo il client associato se memorizzato, oppure modificalo in base a dove risiede il client API
-        api_client = self.coordinator.hass.data["haier_hon"][self.coordinator.config_entry.entry_id].api_client
+        api_client = self.coordinator.api_client
         
         try:
             async with asyncio.timeout(10):
@@ -78,7 +75,6 @@ class HaierClimateEntity(CoordinatorEntity, ClimateEntity):
                     await api_client.set_device_status(
                         self._appliance_id, {"onOffStatus": 1, "machMode": mach_mode}
                     )
-                # Diciamo al coordinatore di aggiornare immediatamente i dati per mostrare lo stato aggiornato
                 await self.coordinator.async_request_refresh()
         except Exception as err:
             _LOGGER.error("Errore nell'invio del comando HVAC: %s", err)

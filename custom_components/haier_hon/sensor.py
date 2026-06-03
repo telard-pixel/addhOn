@@ -30,12 +30,10 @@ class HaierBaseSensor(CoordinatorEntity, SensorEntity):
 
     @property
     def available(self) -> bool:
-        """Il sensore è disponibile se l'ultimo aggancio del coordinatore è andato a buon fine."""
         return self.coordinator.last_update_success and self._appliance_id in self.coordinator.data
 
     @property
     def _device_data(self):
-        """Prende i dati pre-caricati dal coordinatore senza fare chiamate HTTP."""
         return self.coordinator.data.get(self._appliance_id, {})
 
 
