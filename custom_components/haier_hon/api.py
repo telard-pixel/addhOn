@@ -5,7 +5,7 @@ from pyhon import Hon
 _LOGGER = logging.getLogger(__name__)
 
 class HonApiClient:
-    """Client per comunicare con l'API Cloud hOn di Haier tramite pyhOn."""
+    """Client ufficiale per comunicare con l'API Cloud hOn di Haier tramite pyhOn v0.17.5."""
 
     def __init__(self, username, password):
         self._username = username
@@ -13,76 +13,73 @@ class HonApiClient:
         self._hon = None
 
     async def get_devices(self):
-        """Esegue il login ed estrae i dispositivi usando la sintassi nativa di pyhOn v0.17.5."""
+        """Effettua il login e recupera gli elettrodomestici usando il dizionario .data nativo."""
         try:
             if self._hon is None:
-                _LOGGER.info("Inizializzazione della sessione pyhOn per %s...", self._username)
-                self._hon = Hon(self._username, self._password)
+                _LOGGER.info("Inizializzazione autenticazione hOn per l'utente: %s", self._username)
+                
+                # Nella v0.17.x l'inizializzazione solida richiede i parametri passati esplicitamente
+                self._hon = Hon(self._username, self._password, test_mode=False)
+                
+                # Il setup scarica l'elenco dei dispositivi ed effettua il WebSocket/polling iniziale
                 await self._hon.setup()
+                _LOGGER.info("Connessione ai server Cloud Haier hOn stabilita con successo.")
 
             appliances = []
             
-            if not self._hon.appliances:
-                _LOGGER.warning("Nessun dispositivo trovato sull'account hOn.")
+            # Controllo di sicurezza sull'esistenza dell'array degli elettrodomestici
+            if not hOn_appliances := getattr(self._hon, "appliances", None):
+                _LOGGER.warning("Nessun dispositivo associato all'account hOn specificato.")
                 return appliances
 
-            for appliance in self._hon.appliances:
-                # pyhOn memorizza l'ID in appliance.info.get("applianceId") o appliance.id
+            for appliance in hOn_appliances:
+                # Estraiamo l'ID unico del dispositivo (fondamentale per accoppiarlo alle entità)
                 appliance_id = appliance.info.get("applianceId") or getattr(appliance, "id", None)
                 if not appliance_id:
                     continue
-                
-                # Funzione di supporto interna per estrarre i dati in base a come pyhOn espone lo stato
-                def get_param_value(key, default=0):
-                    try:
-                        # 1. Prova a prenderlo dai parametri attuali di pyhOn
-                        if hasattr(appliance, "parameters") and key in appliance.parameters:
-                            return appliance.parameters[key].value
-                        # 2. Prova a prenderlo dal dizionario delle proprietà/stato
-                        if hasattr(appliance, "properties") and key in appliance.properties:
-                            return appliance.properties[key].get("value", default)
-                        if hasattr(appliance, "status") and key in appliance.status:
-                            return appliance.status[key]
-                        # 3. Ripiego provando a leggere l'attributo direttamente se esistente
-                        return getattr(appliance, key, default)
-                    except Exception:
-                        return default
 
-                # Costruiamo la struttura attesa da climate.py e sensor.py
+                # pyhOn v0.17.x memorizza lo stato attuale dei sensori dentro il dizionario appliance.data
+                # Usiamo un recupero sicuro con .get() direttamente sul dizionario dei dati reali
+                device_raw_data = getattr(appliance, "data", {})
+
+                # Costruiamo la struttura 'shadow' attesa da climate.py e sensor.py dell'integrazione
                 appliance_data = {
                     "applianceId": str(appliance_id),
                     "shadow": {
                         "parameters": {
-                            "onOffStatus": {"value": int(get_param_value("onOffStatus", 0))},
-                            "machMode": {"value": int(get_param_value("machMode", 1))},
-                            "tempSel": {"value": float(get_param_value("tempSel", 24))},
-                            "compressorFrequency": {"value": float(get_param_value("compressorFrequency", 0))},
-                            "tempIndoor": {"value": float(get_param_value("tempIndoor", 20))},
-                            "tempOutdoor": {"value": float(get_param_value("tempOutdoor", 20))},
+                            "onOffStatus": {"value": int(device_raw_data.get("onOffStatus", 0))},
+                            "machMode": {"value": int(device_raw_data.get("machMode", 1))},
+                            "tempSel": {"value": float(device_raw_data.get("tempSel", 24.0))},
+                            "compressorFrequency": {"value": float(device_raw_data.get("compressorFrequency", 0.0))},
+                            "tempIndoor": {"value": float(device_raw_data.get("tempIndoor", 20.0))},
+                            "tempOutdoor": {"value": float(device_raw_data.get("tempOutdoor", 20.0))},
                         }
                     }
                 }
                 appliances.append(appliance_data)
                 
             return appliances
+
         except Exception as err:
-            _LOGGER.error("Errore critico durante il get_devices nel client API: %s", err)
+            _LOGGER.error("Errore critico definitivo di comunicazione con pyhOn: %s", err)
             raise err
 
     async def set_device_status(self, appliance_id, parameters: dict):
-        """Invia i comandi impostando i parametri direttamente sull'oggetto pyhOn."""
+        """Invia i comandi di controllo modificando le impostazioni dell'appliance."""
         try:
             if self._hon is None:
+                _LOGGER.error("Impossibile inviare comandi: la sessione hOn non è inizializzata.")
                 return False
                 
             for appliance in self._hon.appliances:
                 current_id = appliance.info.get("applianceId") or getattr(appliance, "id", None)
                 if str(current_id) == str(appliance_id):
+                    # In pyhOn i comandi si inviano aggiornando i parametri tramite il metodo nativo dell'oggetto
                     for key, value in parameters.items():
-                        if hasattr(appliance, "parameters") and key in appliance.parameters:
-                            await appliance.parameters[key].set_value(value)
-                        elif hasattr(appliance, "set_parameter"):
+                        if hasattr(appliance, "set_parameter"):
                             await appliance.set_parameter(key, value)
+                        elif hasattr(appliance, "parameters") and key in appliance.parameters:
+                            await appliance.parameters[key].set_value(value)
                     return True
             return False
         except Exception as err:
