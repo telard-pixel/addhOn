@@ -85,7 +85,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             data_schema=STEP_USER_DATA_SCHEMA,
             errors=errors,
             description_placeholders={
-                "docs_url": "https://github.com/Andre0512/hon"
+                "docs_url": "https://github.com/telard-pixel/haier_hon"
             },
         )
 

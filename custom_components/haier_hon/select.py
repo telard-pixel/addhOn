@@ -70,7 +70,7 @@ class HonProgramSelect(HonBaseEntity, SelectEntity):
             params = getattr(cmd, "parameters", None)
             if params is None:
                 return {}
-            prog_param = params.get("program") or params.get("prCode")
+            prog_param = params.get("program") if "program" in params else params.get("prCode")
             if prog_param is None:
                 return {}
             values = None

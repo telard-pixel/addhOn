@@ -111,5 +111,8 @@ class HonWMStateSensor(HonBaseEntity, SensorEntity):
 
     @property
     def native_value(self) -> str:
-        status_code = str(self._get_attr(WM_ATTR_STATUS))
+        status_code = self._get_attr(WM_ATTR_STATUS)
+        if status_code is None:
+            return "Non disponibile"
+        status_code = str(status_code)
         return WM_STATE_MAP.get(status_code, f"Sconosciuto ({status_code})")

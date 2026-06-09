@@ -17,7 +17,6 @@ class HonBaseEntity(CoordinatorEntity):
     @property
     def _hon_client(self):
         """Ritorna il HonClient per eseguire comandi sul loop dedicato."""
-        from homeassistant.core import HomeAssistant  # noqa: F401
         ha_data = self.hass.data.get(DOMAIN, {})
         for entry_data in ha_data.values():
             if isinstance(entry_data, dict) and "client" in entry_data:
