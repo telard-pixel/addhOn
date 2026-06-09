@@ -18,6 +18,12 @@ from .const import (
     AC_MODE_MAP_REVERSE,
     AC_FAN_MAP,
     AC_FAN_MAP_REVERSE,
+    AC_ATTR_MODE,
+    AC_ATTR_TEMP,
+    AC_ATTR_ON_OFF,
+    AC_ATTR_CURRENT_TEMP,
+    AC_ATTR_OUTDOOR_TEMP,
+    AC_ATTR_FAN_SPEED,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -68,12 +74,12 @@ class HaierClimateEntity(HonBaseEntity, ClimateEntity):
     @property
     def hvac_mode(self) -> HVACMode:
         """Ritorna lo stato HVAC corrente traducendo la stringa di const.py nell'Enum di HA."""
-        on_off = self._get_attr("onOffStatus", "0")
+        on_off = self._get_attr(AC_ATTR_ON_OFF, "0")
         if str(on_off) == "0":
             return HVACMode.OFF
             
-        # Legge machMode (es. "2")
-        mode_val = str(self._get_attr("machMode", "1"))
+        # Legge machMode (es. "2") usando la costante da const.py
+        mode_val = str(self._get_attr(AC_ATTR_MODE, "1"))
         
         # Recupera il testo dal tuo const.py (es. "cool")
         mode_str = AC_MODE_MAP.get(mode_val, "cool")
@@ -86,17 +92,17 @@ class HaierClimateEntity(HonBaseEntity, ClimateEntity):
 
     @property
     def target_temperature(self) -> float | None:
-        """Ritorna la temperatura impostata."""
-        val = self._get_attr("tempSel")
+        """Ritorna la temperatura impostata. None se non disponibile."""
+        val = self._get_attr(AC_ATTR_TEMP)
         try:
-            return float(val) if val is not None else 24.0
+            return float(val) if val is not None else None
         except (ValueError, TypeError):
-            return 24.0
+            return None
 
     @property
     def current_temperature(self) -> float | None:
         """Ritorna la temperatura della stanza."""
-        val = self._get_attr("tempIndoor")
+        val = self._get_attr(AC_ATTR_CURRENT_TEMP)
         try:
             return float(val) if val is not None else None
         except (ValueError, TypeError):
@@ -105,7 +111,7 @@ class HaierClimateEntity(HonBaseEntity, ClimateEntity):
     @property
     def fan_mode(self) -> str | None:
         """Ritorna la velocità della ventilazione basata sulla mappa invertita."""
-        val = str(self._get_attr("windSpeed", "0"))
+        val = str(self._get_attr(AC_ATTR_FAN_SPEED, "0"))
         return AC_FAN_MAP.get(val, "auto")
 
     async def async_set_hvac_mode(self, hvac_mode: HVACMode) -> None:
@@ -123,11 +129,11 @@ class HaierClimateEntity(HonBaseEntity, ClimateEntity):
             if hvac_mode == HVACMode.OFF:
                 await self._send_command_in_executor(client, appliance, {"onOffStatus": "0"})
             else:
-                # Estrae il valore testuale puro dell'Enum di HA (es. HVACMode.COOL -> "cool")
-                mode_str = hvac_mode.value if hasattr(hvac_mode, "value") else str(hvac_mode)
+                # HVACMode è StrEnum: .value torna direttamente la stringa ("cool", "heat", ecc.)
+                mode_str = hvac_mode.value
                 
-                # Cerca "cool" in AC_MODE_MAP_REVERSE per ottenere "2"
-                mode_key = AC_MODE_MAP_REVERSE.get(str(mode_str).lower(), "1")
+                # Cerca il codice numerico in AC_MODE_MAP_REVERSE
+                mode_key = AC_MODE_MAP_REVERSE.get(mode_str, "1")
                 
                 await self._send_command_in_executor(
                     client, appliance, {"onOffStatus": "1", "machMode": str(mode_key)}

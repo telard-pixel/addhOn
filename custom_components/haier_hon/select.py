@@ -94,11 +94,14 @@ class HonProgramSelect(HonBaseEntity, SelectEntity):
 
     @property
     def current_option(self) -> str | None:
-        code = (
-            self._get_attr("startProgram.program")
-            or self._get_attr("startProgram.prCode")
-            or self._get_attr("prCode")
-        )
+        # FIX: controllare esplicitamente is not None invece di usare 'or' che scarta 0
+        code = None
+        for key in ("startProgram.program", "startProgram.prCode", "prCode"):
+            val = self._get_attr(key)
+            if val is not None:
+                code = val
+                break
+        
         if code is None:
             return None
         return self._program_map.get(str(code))

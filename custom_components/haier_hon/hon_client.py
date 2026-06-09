@@ -182,10 +182,9 @@ class HonClient:
             raise RuntimeError("setup_sync() non ha completato il login hOn")
 
     def run_command_sync(self, coro) -> Any:
-        """Esegue una coroutine di comando sul loop dedicato (sincrono, in executor).
+        """Esegue una coroutine pyhOn (es. command.send()) sul loop dedicato.
 
-        Usato da climate.py per inviare comandi senza bloccare l'event loop di HA
-        e senza il RuntimeError 'Timeout context manager should be used inside a task'.
+        Da chiamare in executor — non sull'event loop di HA.
         """
         return self._run_on_hon_loop(coro)
 
@@ -231,13 +230,6 @@ class HonClient:
                 )
 
         self._run_on_hon_loop(_do_update())
-
-    def run_command_sync(self, coro) -> Any:
-        """Esegue una coroutine pyhOn (es. command.send()) sul loop dedicato.
-
-        Da chiamare in executor — non sull'event loop di HA.
-        """
-        return self._run_on_hon_loop(coro)
 
     # ── Re-auth ───────────────────────────────────────────────────────────────
 
