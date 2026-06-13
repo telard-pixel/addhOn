@@ -1,12 +1,18 @@
 {
   "config": {
-    "title": "Haier hOn (Extended)",
     "step": {
       "user": {
         "title": "Accedi con il tuo account hOn",
         "description": "Inserisci le credenziali dell'app Haier hOn. Le stesse email e password che usi sull'app mobile.\n\n⚠️ Questa integrazione è non ufficiale e usa le API hOn in modo non autorizzato da Haier.",
         "data": {
           "email": "Email",
+          "password": "Password"
+        }
+      },
+      "reauth_confirm": {
+        "title": "Ri-autentica il tuo account hOn",
+        "description": "Le credenziali per {email} non sono più valide. Inserisci di nuovo la password.",
+        "data": {
           "password": "Password"
         }
       }
@@ -17,7 +23,9 @@
       "unknown": "Errore imprevisto. Controlla i log di Home Assistant."
     },
     "abort": {
-      "already_configured": "Questo account hOn è già configurato."
+      "already_configured": "Questo account hOn è già configurato.",
+      "reauth_successful": "Ri-autenticazione completata.",
+      "reauth_account_mismatch": "Le nuove credenziali devono appartenere allo stesso account hOn."
     }
   }
 }
